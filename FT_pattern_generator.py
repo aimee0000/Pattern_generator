@@ -118,7 +118,7 @@ def process_csv_to_xlsx_all_pin(digital_file_path, time_increment=5):
     except PermissionError:
         messagebox.showerror("오류", f"파일을 저장할 수 없습니다. '{destination_file}' 파일이 열려 있는지 확인하세요.")
 
-def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_type : 0 = test pin / 1 = all pin
+def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, start_margin = 0, output_margin=0):   #pin_type : 0 = test pin / 1 = all pin
     workbook = openpyxl.load_workbook(file_path, data_only=True)
     calculated_file_path = file_path.replace('.xlsx', '_calculated.xlsx')
     workbook.save(calculated_file_path)
@@ -138,8 +138,6 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
     except ValueError:
         messagebox.showerror("오류", "유효한 숫자를 입력하세요.")
         return
-
-    print(f'cycle time : {cycle_time}')
 
     for i, row in enumerate(df.itertuples(index=False), start=3):
         # D열이 1이고 E열에서 P열이 0인 첫 번째 행 찾기 (gpio_test_row)
@@ -181,6 +179,8 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
             if gpio_test_row is not None and peri_test_row is not None and index + 2 >= peri_test_row:
                 u_data -= u_data_offset
             
+            u_data += int(start_margin)
+
             if u_color == 'FFFF0000' and v_color == 'FFFF0000':
                 v_data = int(u_data/cycle_time)
                 prefix = 'W "T1"; V { all_pin\t=\t'
@@ -198,7 +198,7 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
             elif u_color == 'FF0000FF' and v_color == 'FF0000FF':
                 # peri test output일 경우
                 if index + 2 >= peri_test_row:
-                    u_data_adjusted = u_data + int(margin)
+                    u_data_adjusted = u_data + int(output_margin)
                     v_data_adjusted = int(u_data_adjusted/cycle_time)
                     prefix = "W \"T1\"; V { all_pin\t=\t"
                     data = "X X X X X X " + " ".join(['H' if x == 1 else 'L' for x in d_to_o_data[-6:]]) + " "# + " X X X X X X X X X "
@@ -211,7 +211,7 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
                     gpio_output_row += 1
 
                     if gpio_output_row < 3:
-                        u_data_adjusted = u_data + int(margin)
+                        u_data_adjusted = u_data + int(output_margin)
                         v_data_adjusted = int(u_data_adjusted/cycle_time)
                         prefix = "W \"T1\"; V { all_pin\t=\t"
                         data = " ".join(['H' if x == 1 else 'L' for x in d_to_o_data[:6]]) + " L L L L L L L L L L L L L L L L L "
@@ -256,6 +256,8 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
             u_color = u_cell.font.color.rgb if u_cell.font.color and u_cell.font.color.rgb else None
             v_cell = sheet[f'V{index + 2}']
             v_color = v_cell.font.color.rgb if v_cell.font.color and v_cell.font.color.rgb else None
+
+            u_data += int(start_margin)
             
             if u_color == 'FFFF0000' and v_color == 'FFFF0000':
                 v_data = int(u_data/cycle_time)
@@ -268,7 +270,7 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
             elif u_color == 'FF0000FF' and v_color == 'FF0000FF':
                 #peri test output일 경우
                 if index + 2 >= peri_test_row:
-                    u_data_adjusted = u_data + int(margin)
+                    u_data_adjusted = u_data + int(output_margin)
                     v_data_adjusted = int(u_data_adjusted/cycle_time)
                     prefix = "W \"T1\"; V { all_pin\t=\t"
                     data = "X X X X X X X X " + " ".join(['H' if x == 1 else 'L' for x in d_to_o_data[-6:]]) + " X X X X X X X X X "
@@ -280,7 +282,7 @@ def process_xlsx_to_pattern_all_pin(file_path, pin_type=1, margin=0):   #pin_typ
                     gpio_output_row += 1
 
                     if gpio_output_row < 3:
-                        u_data_adjusted = u_data + int(margin)
+                        u_data_adjusted = u_data + int(output_margin)
                         v_data_adjusted = int(u_data_adjusted/cycle_time)
                         prefix = "W \"T1\"; V { all_pin\t=\t"
                         data = " ".join(['H' if x == 1 else 'L' for x in d_to_o_data[:6]]) + " L L L L L L L L L L L L L L L L L "
@@ -318,10 +320,82 @@ def fill_missing_patterns(file_path, time_increment):
     new_lines = []
     step_count = 0
 
+    stil_header_function = """
+// Cycle time     : 37.000 nano seconds, ANTN[NRZ],ANTP[NRZ]
+// Pattern depth  : 1750339
+// Pattern order  : pin9,pin10,pin11,pin12,pin14,pin15,pin16,pin17,pin18,pin19,pin20,pin21,pin30,pin40,pin41,pin46,pin47,pin48,pin49,pin65,pin66,pin67,pin68
+
+STIL 1.0;
+Signals {
+    GPIO0     In/Out;
+    GPIO1     In/Out;
+    GPIO2     In/Out;
+    GPIO3     In/Out;
+    GPIO4     In/Out;
+    GPIO5     In/Out;
+    GPIO6     In/Out;
+    GPIO7     In/Out;
+    GPIO8     In/Out;
+    GPIO9     In/Out;
+    GPIO10    In/Out;
+    GPIO11    In/Out;
+    GPIO12    In/Out;
+    GPIO13    In/Out;
+    GPIO14    In/Out;
+    GPIO15    In/Out;
+    GPIO16    In/Out;
+    GPIO18    In/Out;
+    GPIO19    In/Out;
+    GPIO26    In/Out;
+    GPIO27    In/Out;
+    GPIO28    In/Out;
+    GPIO29    In/Out;
+}
+
+SignalGroups {
+    allpin = 'GPIO0+GPIO1+GPIO2+GPIO3+GPIO4+GPIO5+GPIO6+GPIO7+GPIO8+GPIO9+GPIO10+GPIO11+GPIO12+GPIO13+GPIO14+GPIO15+GPIO16+GPIO18+GPIO19+GPIO26+GPIO27+GPIO28+GPIO29';
+}
+
+//SUBSECT FUNCTION_TEST_R3B
+Pattern FUNCTION_TEST_R3B {"""
+
+    stil_header_peri = """
+// Cycle time     : 37.000 nano seconds, ANTN[NRZ],ANTP[NRZ]
+// Pattern depth  : 1750339
+// Pattern order  : pin9,pin10,pin14,pin15,pin16,pin17,pin18,pin19,pin65,pin66,pin67,pin68
+
+STIL 1.0;
+Signals {
+    GPIO0     In/Out;
+    GPIO1     In/Out;
+    GPIO2     In/Out;
+    GPIO3     In/Out;
+    GPIO4     In/Out;
+    GPIO5     In/Out;
+    GPIO8     In/Out;
+    GPIO9     In/Out;
+    GPIO10    In/Out;
+    GPIO11    In/Out;
+    GPIO12    In/Out;
+    GPIO13    In/Out;
+}
+
+SignalGroups {
+    allpin = 'GPIO0+GPIO1+GPIO2+GPIO3+GPIO4+GPIO5+GPIO8+GPIO9+GPIO10+GPIO11+GPIO12+GPIO13';
+}
+
+//SUBSECT PERI_TEST_R3B
+Pattern PERI_TEST_R3B {"""
+
+    start_line_index = None  # 초기화
+    start_line_time = None  # 초기화
+
     for i, line in enumerate(lines):
-        new_lines.append(line.strip())
-        
         if "//" in line:
+            if start_line_index is None and start_line_time is None:
+                start_line_index = int(line.split("//")[-1].strip().split(',')[0])
+                start_line_time = int(line.split(",")[-1].strip().replace('ns', ''))
+
             first_tab_index = line.index("\t") + 1
             second_tab_index = line.index("\t", first_tab_index) + 1
 
@@ -329,8 +403,40 @@ def fill_missing_patterns(file_path, time_increment):
             first_colon_index = line.index(";") + 1
             colon_index = line.index(";", first_colon_index)
 
+            # char_cnt로 GPIO 핀의 상태 개수를 확인
             char_cnt = len(line[start_index:colon_index].replace(" ", ""))
-            
+
+        if char_cnt >= 0:
+            break
+
+    print(f'start_line_index : {start_line_index} start_line_time : {start_line_time}')
+
+    if char_cnt > 12:
+        # FUNCTION_TEST_R3B 형식
+        if not new_lines or "Pattern FUNCTION_TEST_R3B" not in new_lines[0]:
+            new_lines.append(stil_header_function)  # 처음 한 번 헤더 추가
+    else:
+        # PERI_TEST_R3B 형식
+        if not new_lines or "Pattern PERI_TEST_R3B" not in new_lines[0]:
+            new_lines.append(stil_header_peri)  # 처음 한 번 헤더 추가          
+
+    current_index = 0
+    current_time = 0
+
+    if start_line_index > 0:
+        while current_index + 1 < start_line_index:
+            step_count += 1
+            x_values = "X " * char_cnt
+            new_line = f'W "T1"; V {{ all_pin\t=\t{x_values.strip()} ;}} // {current_index}, {current_time}ns'
+            new_lines.append(new_line)
+            current_index += 1
+            current_time += time_increment  # 시간 증가
+
+
+    for i, line in enumerate(lines):
+        new_lines.append(line.strip())
+        
+        if "//" in line:
             current_index = int(line.split("//")[-1].strip().split(',')[0])
             current_time = int(line.split(",")[-1].strip().replace('ns', ''))
             
@@ -342,16 +448,24 @@ def fill_missing_patterns(file_path, time_increment):
                     step_count += 1
                     x_values = "X " * char_cnt
                     current_index += 1
-                    current_time += time_increment  # 사용자가 설정한 간격으로 시간 증가
-                    new_line = f'W "T1"; V {{ all_pin =\t{x_values.strip()} ;}} // {current_index}, {current_time}ns'
+                    current_time += time_increment  # 시간 증가
+                    new_line = f'W "T1"; V {{ all_pin\t=\t{x_values.strip()} ;}} // {current_index}, {current_time}ns'
                     new_lines.append(new_line)
 
+    # STIL 형식의 패턴 종료 부분 추가
+    stil_footer = '}'
+    new_lines.append(stil_footer)
+
+    # 새로운 파일을 저장
     base_name, ext = os.path.splitext(file_path)
     new_file_path = f"{base_name}_total{ext}"
 
     with open(new_file_path, 'w') as file:
         for line in new_lines:
-            file.write('\t' + line + '\n')
+            if line == '}':
+                file.write(line + '\n')  # 탭 없이 종료 구문 추가
+            else:
+                file.write('\t' + line + '\n')  # 나머지는 탭 추가
 
     messagebox.showinfo("완료", f"{new_file_path} 파일 작성이 완료되었습니다.")
 
@@ -372,11 +486,17 @@ def run_pattern_process_separate():
     pin_type = 0
 
     try:
-        margin = float(entry_pattern_margin.get())
+        start_margin = float(entry_pattern_start_margin.get())
     except ValueError:
-        margin = 0
+        start_margin = 0
+
+    try:
+        output_margin = float(entry_pattern_output_margin.get())
+    except ValueError:
+        output_margin = 0
+
     if file_path:
-        process_xlsx_to_pattern_all_pin(file_path, pin_type, margin)
+        process_xlsx_to_pattern_all_pin(file_path, pin_type, start_margin, output_margin)
     else:
         messagebox.showerror("오류", "파일 경로를 선택하세요.")
 
@@ -385,11 +505,17 @@ def run_pattern_process_single():
     pin_type = 1
 
     try:
-        margin = float(entry_pattern_margin.get())
+        start_margin = float(entry_pattern_start_margin.get())
     except ValueError:
-        margin = 0
+        start_margin = 0
+
+    try:
+        output_margin = float(entry_pattern_output_margin.get())
+    except ValueError:
+        output_margin = 0
+
     if file_path:
-        process_xlsx_to_pattern_all_pin(file_path, pin_type, margin)
+        process_xlsx_to_pattern_all_pin(file_path, pin_type, start_margin, output_margin)
     else:
         messagebox.showerror("오류", "파일 경로를 선택하세요.")
 
@@ -438,7 +564,7 @@ entry_csv_time_increment = tk.Entry(root, width=10)
 entry_csv_time_increment.grid(row=1, column=9, padx=5, pady=10)
 entry_csv_time_increment.insert(0, "5")
 button_csv_run = tk.Button(root, text="실행", command=run_xlsx_process_based_on_selection)
-button_csv_run.grid(row=1, column=10, padx=10, pady=10)
+button_csv_run.grid(row=1, column=12, padx=10, pady=10)
 
 # pattern 만들기 부분
 pattern_var = tk.StringVar(value="single")  # 기본값을 "all"로 설정
@@ -454,18 +580,23 @@ entry_pattern_file_path = tk.Entry(root, width=30)
 entry_pattern_file_path.grid(row=2, column=4, padx=5, pady=10)
 button_pattern_browse = tk.Button(root, text="search", command=lambda: select_file(entry_pattern_file_path, "xlsx"))
 button_pattern_browse.grid(row=2, column=5, padx=5, pady=10)
-label_pattern_margin = tk.Label(root, text="Margin:")
-label_pattern_margin.grid(row=2, column=6, padx=5, pady=10)
-entry_pattern_margin = tk.Entry(root, width=10)
-entry_pattern_margin.grid(row=2, column=7, padx=5, pady=10)
-entry_pattern_margin.insert(0, "0")
+label_pattern_start_margin = tk.Label(root, text="Start Margin:")
+label_pattern_start_margin.grid(row=2, column=6, padx=5, pady=10)
+entry_pattern_start_margin = tk.Entry(root, width=10)
+entry_pattern_start_margin.grid(row=2, column=7, padx=5, pady=10)
+entry_pattern_start_margin.insert(0, "0")
+label_pattern_output_margin = tk.Label(root, text="Output Margin:")
+label_pattern_output_margin.grid(row=2, column=8, padx=5, pady=10)
+entry_pattern_output_margin = tk.Entry(root, width=10)
+entry_pattern_output_margin.grid(row=2, column=9, padx=5, pady=10)
+entry_pattern_output_margin.insert(0, "0")
 label_pattern_time_increment = tk.Label(root, text="Cycle(ns):")
-label_pattern_time_increment.grid(row=2, column=8, padx=5, pady=10)
+label_pattern_time_increment.grid(row=2, column=10, padx=5, pady=10)
 entry_pattern_time_increment = tk.Entry(root, width=10)
-entry_pattern_time_increment.grid(row=2, column=9, padx=5, pady=10)
+entry_pattern_time_increment.grid(row=2, column=11, padx=5, pady=10)
 entry_pattern_time_increment.insert(0, "5")
 button_pattern_run = tk.Button(root, text="실행", command=run_pattern_process_based_on_selection)
-button_pattern_run.grid(row=2, column=10, padx=10, pady=10)
+button_pattern_run.grid(row=2, column=12, padx=10, pady=10)
 
 ## 패턴 채우기
 label_name = tk.Label(root, text="[Fill mask Pattern]")
@@ -482,6 +613,6 @@ entry_time_increment = tk.Entry(root, width=10)
 entry_time_increment.grid(row=3, column=9, padx=5, pady=10)
 entry_time_increment.insert(0, "5")
 button_run = tk.Button(root, text="실행", command=run_total_pattern_process)
-button_run.grid(row=3, column=10, padx=10, pady=10)
+button_run.grid(row=3, column=12, padx=10, pady=10)
 
 root.mainloop()
