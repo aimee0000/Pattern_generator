@@ -321,9 +321,9 @@ def fill_missing_patterns(file_path, time_increment):
     step_count = 0
 
     stil_header_function = """
-// Cycle time     : 37.000 nano seconds, ANTN[NRZ],ANTP[NRZ]
+// Cycle time     : 5.000 nano seconds, ANTN[NRZ],ANTP[NRZ]
 // Pattern depth  : 1750339
-// Pattern order  : pin9,pin10,pin11,pin12,pin14,pin15,pin16,pin17,pin18,pin19,pin20,pin21,pin30,pin40,pin41,pin46,pin47,pin48,pin49,pin65,pin66,pin67,pin68
+// Pattern order  : pin65,pin66,pin67,pin68,pin9,pin10,pin11,pin12,pin14,pin15,pin16,pin17,pin18,pin19,pin20,pin21,pin30,pin40,pin41,pin46,pin47,pin48,pin49
 
 STIL 1.0;
 Signals {
@@ -355,14 +355,16 @@ Signals {
 SignalGroups {
     allpin = 'GPIO0+GPIO1+GPIO2+GPIO3+GPIO4+GPIO5+GPIO6+GPIO7+GPIO8+GPIO9+GPIO10+GPIO11+GPIO12+GPIO13+GPIO14+GPIO15+GPIO16+GPIO18+GPIO19+GPIO26+GPIO27+GPIO28+GPIO29';
 }
+//PPRO FUNCTION_TEST_R3B
+//
 
 //SUBSECT FUNCTION_TEST_R3B
 Pattern FUNCTION_TEST_R3B {"""
 
     stil_header_peri = """
-// Cycle time     : 37.000 nano seconds, ANTN[NRZ],ANTP[NRZ]
+// Cycle time     : 5.000 nano seconds, ANTN[NRZ],ANTP[NRZ]
 // Pattern depth  : 1750339
-// Pattern order  : pin9,pin10,pin14,pin15,pin16,pin17,pin18,pin19,pin65,pin66,pin67,pin68
+// Pattern order  : pin65,pin66,pin67,pin68,pin9,pin10,pin14,pin15,pin16,pin17,pin18,pin19
 
 STIL 1.0;
 Signals {
@@ -383,6 +385,8 @@ Signals {
 SignalGroups {
     allpin = 'GPIO0+GPIO1+GPIO2+GPIO3+GPIO4+GPIO5+GPIO8+GPIO9+GPIO10+GPIO11+GPIO12+GPIO13';
 }
+//PPRO PERI_TEST_R3B
+//
 
 //SUBSECT PERI_TEST_R3B
 Pattern PERI_TEST_R3B {"""
